@@ -102,4 +102,4 @@ config = AutoConfig.from_pretrained('distilbert-base-cased',
 
 tokenizer = tokenizer = AutoTokenizer.from_pretrained('distilbert-base-cased', config=config)
 Xval = bert_tokenize_and_encode(tokenizer, Xval, 128)
-inspector = Inspector(seq, encoder.bert, Xval[:100], Yval[:100], tokenizer)
+inspector = Inspector(seq, Xval[:100], Yval[:100], tokenizer)

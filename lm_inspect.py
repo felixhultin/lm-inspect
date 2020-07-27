@@ -1,6 +1,8 @@
 import transformers
 import torch
 
+from typing import Union
+
 from torch.utils.data import Dataset, DataLoader
 
 class DocumentDataset(Dataset):
@@ -24,24 +26,30 @@ class DocumentBatcher:
 
 class Inspector:
 
-    def __init__(self, nn, lm, X, Y, tokenizer):
+    def __init__(self, nn, X, Y, tokenizer):
         self.nn = nn
-        #self.lm = lm
         self.lm = self._find_pretrained(nn)
-        self.config = lm.config
+        self.config = self.lm.config
+        self.tokenizer = tokenizer
         self.X = X
         self.Y = Y
+        # Values to be initialized in self.evaluate()
+        self.tokenized_inputs = None
         self.attentions = []
         self.predictions  = self.evaluate()
 
-    def _add_attentions_hook(self, model, input, output):
+    def _update_attentions_hook(self, model, input, output):
+        if self.tokenized_inputs is None:
+            self.tokenized_inputs = input[0]
+        else:
+            self.tokenized_inputs = torch.cat( (self.tokenized_inputs, input[0], ))
         a = torch.stack(output[-1])
         self.attentions.append(a)
 
     def _find_pretrained(self, layer):
         for l in layer.children():
             if isinstance(l, transformers.PreTrainedModel):
-                l.register_forward_hook(self._add_attentions_hook)
+                l.register_forward_hook(self._update_attentions_hook)
                 return l
             return self._find_pretrained(l)
         raise ValueError("Model must contain a transformers pretrained language model.")
@@ -57,22 +65,45 @@ class Inspector:
             for batch in loader:
                 x, _ = batch
                 predictions += self.nn(x)
-                #a = self.lm(x)
-                #attentions.append(torch.stack(a))
                 n += loader.batch_size
                 print('\r' + str(n) + " / " + str(len(loader)), end='')
+            self.attentions = torch.cat(self.attentions, dim=1).permute(1, 0, 2, 3, 4)
             return predictions
 
-    def layer_head(self, layer: int = None, head : int = None):
-        attentions = self.attentions
+    def scope(self, attentions, layer: int = None, head : int = None,
+              token_pos : Union[list, int] = None):
         if layer is not None:
             attentions = attentions[:, layer, :, :]
         if head is not None:
             attentions = attentions[:, :, head, :]
+        if token_pos is not None:
+            token_pos = [token_pos] if type(token_pos) is int else token_pos
+            attentions = attentions[:, :, :, token_pos]
         return attentions
 
-    def agg_by_label(self, layer: int = None, head : int = None, top : int = 10):
-        raise NotImplementedError
+    def top_words(self, attentions):
+        pass
+
+    def agg_by_label(self, label, **kwargs):
+        indices = [idx for idx, y in enumerate(self.Y) if y == label]
+        attentions = self.scope(self.attentions[indices], **kwargs)
+        top = torch.empty(self.tokenized_inputs.shape[1], self.tokenizer.vocab_size)
+        for idx, zipped in enumerate(zip(self.tokenized_inputs, attentions)):
+            input_ids, att = zipped
+            top += attentions[idx]
+        return top
+
+    def agg_by_word(self, word, layer: int = None, head : int = None):
+        indices = [idx for idx, y in self.Y if y == label]
+        pass
+
+    def agg_by_ngram(self, words, **kwargs):
+        pass
+
+    def tokenize_attentions():
+        pass
 
     def agg_by_word(self, layer : int = None, head : int = None, top: int = 10):
         raise NotImplementedError
+
+    # x = layer, head, position, token
