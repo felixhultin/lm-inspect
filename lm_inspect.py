@@ -70,15 +70,28 @@ class Inspector:
             self.attentions = torch.cat(self.attentions, dim=1).permute(1, 0, 2, 3, 4)
             return predictions
 
-    def scope(self, attentions, layer: int = None, head : int = None,
+    def scope(self, attentions, layer: Union[list, int] = None, head : Union[list, int] = None,
               token_pos : Union[list, int] = None):
+        """Returns specified layer(s), head(s) and token position(s) to inspect.
+
+        Parameters
+        ----------
+        layer: Union[list, str]
+            Layer(s) to inspect.
+        head: Union[list, str]
+            Head(s) to inspect.
+        token_pos: Union[list, str]
+            Token position(s) to inspect.
+        """
         if layer is not None:
-            attentions = attentions[:, layer, :, :]
+            layers = [layer] if type(layer) == int else layer
+            attentions = attentions[:, layers, :, :]
         if head is not None:
-            attentions = attentions[:, :, head, :]
+            heads = [head] if type(head) == int else head
+            attentions = attentions[:, :, heads, :]
         if token_pos is not None:
-            token_pos = [token_pos] if type(token_pos) is int else token_pos
-            attentions = attentions[:, :, :, token_pos]
+            token_positions = [token_pos] if type(token_pos) is int else token_pos
+            attentions = attentions[:, :, :, token_positions]
         return attentions
 
     def agg(self, top, display: str = "words", decode: bool = True, k: int = 1000):
@@ -89,34 +102,44 @@ class Inspector:
         elif display == "words+positions":
             topk = top.topk(k)
         else:
-            msg = ("display value " + display + " "
+            msg = (str(display) +
                    "is not a valid display value"
                    "Valid display values are: words, positions, words+positions")
             raise ValueError(msg)
-        return self.tokenizer.decode(topk.indices)
+        return self.tokenizer.convert_ids_to_tokens(topk.indices)
 
-    def agg_by_label(self, label, **kwargs):
-        indices = [idx for idx, y in enumerate(self.Y) if y == label]
-        attentions = self.scope(self.attentions[indices], **kwargs)
+    def by_label(self, label: Union[list, str], **kwargs):
+        """Top word, position or word+positions by one or many label(s).
+
+        Parameters
+        ----------
+        label: Union[list, str]
+            Unique label of the evaluation data Y.
+
+        Raises
+        ------
+        ValueError
+            If label is not in the evaluation data Y.
+        """
+        labels = label if type(label) == list else [label]
+        indices = [idx for idx, y in enumerate(self.Y) if y in labels]
+        if not indices:
+            msg = "No such label(s): " + str(label)
+            raise ValueError(msg)
+        layer, head, token_pos = kwargs.get('layer'), kwargs.get('head'), kwargs.get('token_pos')
+        attentions = self.scope(self.attentions[indices], layer, head, token_pos)
         top = torch.zeros(self.tokenized_inputs.shape[1], self.tokenizer.vocab_size)
         for idx, att in zip(indices, attentions):
             input_ids = self.tokenized_inputs[idx]
             n_layers, n_heads, max_size, _ = att.shape
             att_sum = att.sum(dim=0).sum(dim=0).sum(dim=0) / n_layers / n_heads / max_size
             top[list(range(max_size)), input_ids] += att_sum
-        return self.agg(top, **kwargs)
+        display, decode, k = kwargs.get('display', 'words'), kwargs.get('decode'), kwargs.get('k')
+        return self.agg(top, display, decode, k)
 
-    def agg_by_word(self, word, layer: int = None, head : int = None):
+    def by_word(self, word, layer: int = None, head : int = None):
         indices = [idx for idx, y in self.Y if y == label]
         pass
 
-    def agg_by_ngram(self, words, **kwargs):
+    def by_ngram(self, words, **kwargs):
         pass
-
-    def tokenize_attentions():
-        pass
-
-    def agg_by_word(self, layer : int = None, head : int = None, top: int = 10):
-        raise NotImplementedError
-
-    # x = layer, head, position, token
