@@ -1,9 +1,10 @@
+import json
 import logging
 
 import transformers
 import torch
 
-from typing import Union
+from typing import List, Union
 
 from torch.utils.data import Dataset, DataLoader
 
@@ -33,7 +34,7 @@ class Inspector:
         self.lm = self._find_pretrained(nn)
         self.config = self.lm.config
         self.tokenizer = tokenizer
-        # Values reset in self.evaluate()
+        # Values to reset in .evaluate()
         self.X = X
         self.Y = Y
         self.tokenized_inputs = None
@@ -101,7 +102,13 @@ class Inspector:
             attentions = attentions[:, :, :, token_positions]
         return attentions
 
-    def topk(self, top, display: str = "words", k: int = 1000, decode: bool = True):
+    def range(self, attentions, sample_indices: List[int]):
+        return attentions[sample_indices]
+
+    def apply_config(self, attentions):
+        pass
+
+    def topk(self, top, display: str = "words", k: int = 1000, decode: bool = True, return_json: bool = False):
         """Top most attended positions, words or words+position pair.
 
         Parameters
@@ -138,13 +145,25 @@ class Inspector:
         if decode and display:
             if display == 'words':
                 indices = self.tokenizer.convert_ids_to_tokens(indices)
+            if display == "positions":
+                indices = [int(i) for i in indices]
             if display == 'words+positions':
                 # TODO: fix word+ṕositions
                 indices, probs = topk.indices[:, 0], topk.values[:, 0]
                 indices = enumerate(self.tokenizer.convert_ids_to_tokens(indices))
+        topk = [ {"value": i, "prob": float(p)} for i, p in zip(indices, probs)]
+        return json.dumps(topk) if return_json else topk
 
-        return [ (i, float(p)) for i, p in zip(indices, probs)]
+    def todict(self, top):
+        _, _, _, n_positions, _ = top.shape
+        topk = (top.sum(dim=0).sum(dim=2) / n_positions).topk(5)
+        indices, probs = topk.indices, topk.values
+        output = {'indices': indices.tolist(), 'values': probs.tolist()}
+        return output
 
+    """
+        layers, heads, position, topk_words
+    """
     def by_label(self, label: Union[list, str], **kwargs):
         """Top word, position or word+positions by one or many label(s).
 
@@ -165,14 +184,26 @@ class Inspector:
             raise ValueError(msg)
         scope_kwargs = { k:v for k,v in kwargs.items() if k in {'layer', 'head', 'token_pos'} }
         attentions = self.scope(self.attentions[indices], **scope_kwargs)
-        top = torch.zeros(self.tokenized_inputs.shape[1], self.tokenizer.vocab_size)
+        n_samples, n_layers, n_heads, max_size, _ = attentions.shape
+        # Store attentions to attentions.
+        top = torch.zeros( n_samples, n_layers, n_heads, max_size, self.tokenizer.vocab_size )
+        for n in range(len(self.tokenized_inputs[indices])):
+            token_ids = self.tokenized_inputs[indices][n]
+            top.index_add_(4, token_ids, attentions)
+        topk_kwargs = { k:v for k,v in kwargs.items() if k in {'display', 'decode', 'k', 'return_json'} }
+        return top#, attentions
+
+        """
+        top = torch.zeros(self.config.n_layers, self.config.n_heads, self.tokenized_inputs.shape[1], self.tokenizer.vocab_size)
         for idx, att in zip(indices, attentions):
             input_ids = self.tokenized_inputs[idx]
             n_layers, n_heads, max_size, _ = att.shape
             att_sum = att.sum(dim=0).sum(dim=0).sum(dim=0) / n_layers / n_heads / max_size
             top[list(range(max_size)), input_ids] += att_sum
-        topk_kwargs = { k:v for k,v in kwargs.items() if k in {'display', 'decode', 'k'} }
-        return self.topk(top, **topk_kwargs)
+        """
+        #topk_kwargs = { k:v for k,v in kwargs.items() if k in {'display', 'decode', 'k', 'return_json'} }
+        #
+        #return self.topk(top, **topk_kwargs)
 
     def by_word(self, word, layer: int = None, head : int = None):
         indices = [idx for idx, y in self.Y if y == label]
