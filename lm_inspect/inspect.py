@@ -48,6 +48,7 @@ class LanguageModelInspector(TopKMixin):
 
         pass
 
+
     def _update_attentions_hook(self, model, input, output):
         if self.tokenized_inputs is None:
             self.tokenized_inputs = input[0]
@@ -56,6 +57,7 @@ class LanguageModelInspector(TopKMixin):
         a = torch.stack(output[-1])
         self.attentions.append(a)
 
+
     def _find_pretrained(self, layer):
         for l in layer.children():
             if isinstance(l, transformers.PreTrainedModel):
@@ -63,6 +65,7 @@ class LanguageModelInspector(TopKMixin):
                 return l
             return self._find_pretrained(l)
         raise ValueError("Model must contain a transformers pretrained language model.")
+
 
     def evaluate(self, X, Y):
         self.X, self.Y = X, Y
@@ -86,11 +89,12 @@ class LanguageModelInspector(TopKMixin):
             return predictions
 
 
-    def apply_config(self, **kwargs):
+    def _apply_config(self, **kwargs):
         filter_args = {k:v for k,v in kwargs.items() if k in ['labels', 'words']}
         scope_args = {k:v for k,v in kwargs.items() if k in ['layer', 'head', 'token_pos']}
         context_args = {k:v for k,v in kwargs.items() if k in ['labels', 'words']}
         return self._apply_scope(self._apply_filter(self.attentions, **filter_args), **scope_args)
+
 
     def _apply_scope(self, attentions, layer: Union[list, int] = None, head : Union[list, int] = None,
               token_pos : Union[list, int] = None):
@@ -138,5 +142,13 @@ class LanguageModelInspector(TopKMixin):
             raise ValueError(msg)
         return attentions
 
+
     def _apply_context(self):
         raise NotImplementedError
+
+    def todict(self, top):
+        _, _, _, n_positions, _ = top.shape
+        topk = (top.sum(dim=0).sum(dim=2) / n_positions).topk(5)
+        indices, probs = topk.indices, topk.values
+        output = {'indices': indices.tolist(), 'values': probs.tolist()}
+        return output

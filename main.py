@@ -8,7 +8,7 @@ from torch import nn
 
 from transformers import AutoConfig, AutoTokenizer, AutoModel
 
-from lm_inspect import Inspector
+from lm_inspect import LanguageModelInspector
 
 class BERTEncoder(nn.Module):
 
@@ -95,11 +95,26 @@ state_dict = torch.load('models/pre-trained/wsd-clf.pt', map_location='cpu')
 seq.load_state_dict(state_dict)
 
 _, Xval, _, Yval = train_test_split(X, Y, test_size=0.2, random_state=0)
+Xval, Yval = zip(*[ (x, y) for x, y in zip(Xval,Yval) if y == 'case%1:26:00::'])
+
 config = AutoConfig.from_pretrained('distilbert-base-cased',
                                     output_hidden_states=True,
                                     output_attentions=True
                                     )
 
-tokenizer = tokenizer = AutoTokenizer.from_pretrained('distilbert-base-cased', config=config)
+
+
+
+
+tokenizer = AutoTokenizer.from_pretrained('distilbert-base-cased', config=config)
 Xval = bert_tokenize_and_encode(tokenizer, Xval, 128)
-inspector = Inspector(seq, Xval[:100], Yval[:100], tokenizer)
+inspector = LanguageModelInspector(seq, Xval[:10], Yval[:10], tokenizer)
+
+
+
+
+"""
+inspector.filter().scope().context().most_attended_to(k=3)
+
+
+"""

@@ -1,16 +1,8 @@
-//debugger;
-//requirejs.config({paths: {d3: "https://d3js.org/d3.v4.min.js"}});
-console.log("inside js");
-
 require.config({paths: {d3: "http://localhost:8888/notebooks/d3/d3.v4.min"}});
 require(["d3"], function(d3) {
-
   var margin = {top: 1, right: 1, bottom: 1, left: 1},
       width = 300 - margin.left - margin.right,
       height = 145 - margin.top - margin.bottom;
-
-
-  d3.json("top.json", function(data) {
 
     function round(value, decimals) {
       return Number(Math.round(value+'e'+decimals)+'e-'+decimals);
@@ -32,12 +24,16 @@ require(["d3"], function(d3) {
   100: '[UNK]', 0: '[PAD]', 117: ',', 3854: 'Nations', 24950: 'paragraph', 123: '2', 1244: 'United', 1413: 'line', 2373: 'read', 6606: 'Fund', 13563: 'Property', 6534: 'Organization', 1367: '12', 4288: 'Children', 124: '3', 1291: 'World', 8500: 'Page', 1370: 'For'}
 
 
+    // Temporary hack
+    var data = results;
+    var tmpTokenizer = tokenizer;
+
     var uniqueIndices = data.indices
       .reduce((prev, curr) => prev.concat(curr), [])
       .reduce((prev, curr) => prev.concat(curr), [])
       .filter((item, i, arr) => arr.indexOf(item) === i);
 
-    debugger;
+
 
     var myColor = d3.scaleOrdinal().domain(uniqueIndices).range(d3.schemeCategory20b);//(["gold", "blue", "green", "yellow", "black", "grey", "darkgreen", "pink", "brown", "slateblue", "grey1", "orange"])
 
@@ -219,12 +215,11 @@ require(["d3"], function(d3) {
     }
     */
 
+    var nofLayers = data.indices.length;
+    var nofHeads = data.indices[0].length;
 
-
-    update(6, 12);
+    update(nofLayers, nofHeads);
 
     // Generate and display some random table data
-
-  });
 
 });

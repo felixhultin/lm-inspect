@@ -1,4 +1,4 @@
-from IPython.core.display import display, HTML, Javascript
+from IPython.core.display import display, HTML, Javascript#, CSS
 from string import Template
 
 def visualize_inspector():
@@ -9,8 +9,9 @@ def visualize_inspector():
     display(d3)
     display(js)
 
-def visualize():
-    js_text = Javascript(filename='web/visualize.js').data
+def visualize(results, tokenizer):
+    js_text = Javascript(filename='lm_inspect/web/visualize.js').data
+    #css_text = CSS(filename='lm_inspect/web/inspect.css').data
     html_template = Template('''
         <body>
           <div id="container">
@@ -20,7 +21,10 @@ def visualize():
             </table>
           <div/>
         </body>
-        <script>$js_text</script>
+        <script>
+            results = $results
+            tokenizer = $tokenizer
+            $js_text
+        </script>
     ''')
-    #return html_template
-    display(HTML(html_template.substitute({'js_text': js_text})))
+    display(HTML(html_template.substitute({'js_text': js_text, 'results': results, 'tokenizer': tokenizer})))
