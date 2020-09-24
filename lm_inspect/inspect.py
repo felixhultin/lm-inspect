@@ -90,9 +90,9 @@ class LanguageModelInspector(TopKMixin):
 
 
     def _apply_config(self, **kwargs):
-        filter_args = {k:v for k,v in kwargs.items() if k in ['labels', 'words']}
+        filter_args = {k:v for k,v in kwargs.items() if k in ['label', 'words']}
         scope_args = {k:v for k,v in kwargs.items() if k in ['layer', 'head', 'token_pos']}
-        context_args = {k:v for k,v in kwargs.items() if k in ['labels', 'words']}
+        context_args = {k:v for k,v in kwargs.items() if k in ['label', 'words']}
         return self._apply_scope(self._apply_filter(self.attentions, **filter_args), **scope_args)
 
 
@@ -140,7 +140,7 @@ class LanguageModelInspector(TopKMixin):
         if not indices:
             msg = "No such label(s): " + str(label)
             raise ValueError(msg)
-        return attentions
+        return attentions[indices, :, :, :]
 
 
     def _apply_context(self):
