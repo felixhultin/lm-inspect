@@ -1,3 +1,4 @@
+File Edit Options Buffers Tools Python Help
 import json
 import logging
 
@@ -76,7 +77,6 @@ class LanguageModelInspector(TopKMixin):
             loader = DataLoader(dataset, batch_size=10, collate_fn=batcher)
             n = 0
             predictions = []
-            attentions = []
             print("Evaluating data")
             for batch in loader:
                 x, _ = batch
@@ -92,8 +92,16 @@ class LanguageModelInspector(TopKMixin):
     def _apply_config(self, **kwargs):
         filter_args = {k:v for k,v in kwargs.items() if k in ['label', 'words']}
         scope_args = {k:v for k,v in kwargs.items() if k in ['layer', 'head', 'token_pos']}
-        context_args = {k:v for k,v in kwargs.items() if k in ['label', 'words']}
-        return self._apply_scope(self._apply_filter(self.attentions, **filter_args), **scope_args)
+        context_args = {k:v for k,v in kwargs.items() if k in ['input_id']}
+
+        attentions, params = self._apply_filter(self.attentions, **filter_args)
+        if params.get('indices') and type(context_args.get('input_id')) == list:
+            context_args['input_id'] = [context_args['input_id'][i] for i in params.get('indices')]
+
+        attentions, _ = self._apply_scope(attentions, **scope_args)
+        attentions, _ = self._apply_context(attentions, **context_args)
+
+        return attentions, params
 
 
     def _apply_scope(self, attentions, layer: Union[list, int] = None, head : Union[list, int] = None,
@@ -118,7 +126,7 @@ class LanguageModelInspector(TopKMixin):
         if token_pos is not None:
             token_positions = [token_pos] if type(token_pos) is int else token_pos
             attentions = attentions[:, :, :, token_positions]
-        return attentions
+        return attentions, {}
 
     def _apply_filter(self, attentions, label: Union[list, str] = None):
         """Top word, position or word+positions by one or many label(s).
@@ -140,11 +148,16 @@ class LanguageModelInspector(TopKMixin):
         if not indices:
             msg = "No such label(s): " + str(label)
             raise ValueError(msg)
-        return attentions[indices, :, :, :]
+        attentions = attentions[indices, :, :, :]
+        return attentions, {'indices': indices}
 
-
-    def _apply_context(self):
-        raise NotImplementedError
+    def _apply_context(self, attentions, input_id: Union[List[int], int] = None):
+        if input_id is not None:
+            input_ids = [input_id] if type(input_id) == int else input_id
+            n_samples = attentions.shape[0]
+            attentions = attentions[list(range(n_samples)), :, :, input_ids, :]
+            attentions = attentions.unsqueeze(3)
+        return attentions, {}
 
     def todict(self, top):
         _, _, _, n_positions, _ = top.shape

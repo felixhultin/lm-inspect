@@ -1,4 +1,4 @@
-require.config({paths: {d3: "http://localhost:8888/notebooks/d3/d3.v4.min"}});
+require.config({paths: {d3: "https://d3js.org/d3.v4.min"}}); // FIX TO MAKE DYNAMIC
 require(["d3"], function(d3) {
   var margin = {top: 1, right: 1, bottom: 1, left: 1},
       width = 300 - margin.left - margin.right,
@@ -18,11 +18,6 @@ require(["d3"], function(d3) {
           Jupyter.notebook.kernel.execute(`print(${python})`, callbacks);
       });
     };
-
-    var tmpTokenizer = {8960: 'servants', 2049: 'force', 9602: 'Lithuania', 1669: 'period', 1425: 'age', 1556: 'With', 1817: 'leave', 6391: 'pregnant', 11037: 'Insurance', 1316: 'held', 2601: 'Law', 170: 'a', 1578: 'career', 8108: 'servant', 1201: 'years', 2740: 'cases', 6714: 'dismissed', 1210: 'three', 1470: 'public', 1219: 'during', 1482: 'children', 2250: 'Republic', 5965: 'reaches', 1103: 'the', 1104: 'of', 1105: 'and', 1235: 'until', 2516: 'Service', 1111: 'for', 1113: 'on',
-    5986: 'insurance', 1250: 'work', 100: '[UNK]', 6245: 'benefits', 2790: 'provides', 1126: 'an', 2027: 'child', 113: '(', 114: ')', 1137: 'or', 117: ',', 24950: 'paragraph', 119: '.', 9467: 'specified', 17663: 'sickness',
-  100: '[UNK]', 0: '[PAD]', 117: ',', 3854: 'Nations', 24950: 'paragraph', 123: '2', 1244: 'United', 1413: 'line', 2373: 'read', 6606: 'Fund', 13563: 'Property', 6534: 'Organization', 1367: '12', 4288: 'Children', 124: '3', 1291: 'World', 8500: 'Page', 1370: 'For'}
-
 
     // Temporary hack
     var data = results;
