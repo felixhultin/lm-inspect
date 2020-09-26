@@ -32,11 +32,12 @@ class DocumentBatcher:
 
 class LanguageModelInspector(TopKMixin):
 
-    def __init__(self, nn, X, Y, tokenizer):
+    def __init__(self, nn, X, Y, tokenizer, label_encoder = None):
         self.nn = nn
         self.lm = self._find_pretrained(nn)
         self.config = self.lm.config
         self.tokenizer = tokenizer
+        self.label_encoder = label_encoder
         # Values to reset in .evaluate()
         self.X = X
         self.Y = Y
@@ -80,7 +81,13 @@ class LanguageModelInspector(TopKMixin):
             print("Evaluating data")
             for batch in loader:
                 x, _ = batch
-                predictions += self.nn(x)
+                scores = self.nn(x)
+                guesses = scores.argmax(dim=1)
+                if self.label_encoder:
+                    import pdb
+                    pdb.set_trace()
+                    guesses = self.label_encoder.inverse_transform(guesses.cpu()).tolist()
+                predictions += guesses
                 n += loader.batch_size
                 # TODO: fix bug in progress message
                 logging.info(n, " / ", len(Y))
