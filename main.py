@@ -3,7 +3,9 @@ import sys
 import pandas
 import torch
 
+from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
+
 from torch import nn
 
 from transformers import AutoConfig, AutoTokenizer, AutoModel
@@ -49,7 +51,7 @@ class BERTEncoder(nn.Module):
 
         return word_outputs
 
-encoder = BERTEncoder('distilbert-base-cased', 'cpu', 10000)
+encoder = BERTEncoder('KB/bert-base-swedish-cased', 'cuda', 10000)
 
 def context(doc, pos, window_size):
 
@@ -81,37 +83,39 @@ def read_data(filename, window_size):
 
 def bert_tokenize_and_encode(tokenizer, X, max_len):
   for x in X:
-    x['doc'] = tokenizer.encode(x['doc'], max_length=max_len, pad_to_max_length=True, add_special_tokens=False)
+    x['doc'] = tokenizer.encode(x['doc'], max_length=max_len, pad_to_max_length=True, add_special_tokens=False, truncation=True)
   return X
 
-X, Y = read_data('examples/wsd_train.txt', 64)
+Xval, Yval = read_data('../swedish_wsd/swedish_lexical_sample_GOLD_corpus.csv', 32)
 
 seq = torch.nn.Sequential(
             encoder,
             torch.nn.Dropout(0.2),
-            torch.nn.Linear(encoder.output_size, out_features=222)
-        )
-state_dict = torch.load('models/pre-trained/wsd-clf.pt', map_location='cpu')
+            torch.nn.Linear(encoder.output_size, out_features=358)
+        ).to('cuda')
+state_dict = torch.load('models/KB-bert-swedish-cased-wsd.pt')
 seq.load_state_dict(state_dict)
 
-_, Xval, _, Yval = train_test_split(X, Y, test_size=0.2, random_state=0)
-Xval, Yval = zip(*[ (x, y) for x, y in zip(Xval,Yval) if y == 'case%1:26:00::'])
+#_, Xval, _, Yval = train_test_split(X, Y, test_size=0.2, random_state=0)
+#Xval, Yval = zip(*[ (x, y) for x, y in zip(Xval,Yval) if y == 'case%1:26:00::'])
 
-config = AutoConfig.from_pretrained('distilbert-base-cased',
+config = AutoConfig.from_pretrained('KB/bert-base-swedish-cased',
                                     output_hidden_states=True,
                                     output_attentions=True
                                     )
 
+tokenizer = AutoTokenizer.from_pretrained('KB/bert-base-swedish-cased', config=config)
+Xval = bert_tokenize_and_encode(tokenizer, Xval, 64)
 
-
-
-
-tokenizer = AutoTokenizer.from_pretrained('distilbert-base-cased', config=config)
-Xval = bert_tokenize_and_encode(tokenizer, Xval, 128)
-inspector = LanguageModelInspector(seq, Xval[:10], Yval[:10], tokenizer)
-
-
-
+# BOF HACK to get label encoder
+_, Ytrain = read_data('../swedish_wsd/swedish_lexical_sample_TRAIN_corpus.csv', 32)
+label_encoder = LabelEncoder()
+label_encoder.fit(Ytrain)
+# EOF HACK
+inspector = LanguageModelInspector(seq, Xval, Yval, tokenizer, label_encoder)
+input_ids = [x['pos'] for x in Xval]
+results = inspector.topk_most_attended(k=5, label='betydelse_1_2', layer=[0,3, 6, 11], head=1, 
+                                       input_id=input_ids)
 
 """
 inspector.filter().scope().context().most_attended_to(k=3)
