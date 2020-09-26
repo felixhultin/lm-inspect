@@ -83,8 +83,6 @@ class LanguageModelInspector(TopKMixin):
                 scores = self.nn(x)
                 guesses = scores.argmax(dim=1)
                 if self.label_encoder:
-                    import pdb
-                    pdb.set_trace()
                     guesses = self.label_encoder.inverse_transform(guesses.cpu()).tolist()
                 predictions += guesses
                 n += loader.batch_size
