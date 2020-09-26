@@ -1,4 +1,3 @@
-File Edit Options Buffers Tools Python Help
 import json
 import logging
 
