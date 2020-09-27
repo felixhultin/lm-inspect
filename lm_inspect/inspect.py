@@ -4,6 +4,7 @@ import logging
 import transformers
 import torch
 
+from inspect import getfullargspec
 from typing import Dict, List, Union, Tuple
 
 from torch.utils.data import Dataset, DataLoader
@@ -94,9 +95,9 @@ class LanguageModelInspector(TopKMixin):
 
 
     def _apply_config(self, **kwargs):
-        filter_args = {k:v for k,v in kwargs.items() if k in ['label', 'words']}
-        scope_args = {k:v for k,v in kwargs.items() if k in ['layer', 'head', 'token_pos']}
-        context_args = {k:v for k,v in kwargs.items() if k in ['input_id']}
+        filter_args = {k:v for k,v in kwargs.items() if k in getfullargspec(self._apply_filter.args)}
+        scope_args = {k:v for k,v in kwargs.items() if k in getfullargspec(self._apply_scope).args}
+        context_args = {k:v for k,v in kwargs.items() if k in getfullargspec(self._apply_context).args}
 
         attentions, params = self._apply_filter(self.attentions, **filter_args)
         if params.get('indices') and type(context_args.get('input_id')) == list:
@@ -132,7 +133,7 @@ class LanguageModelInspector(TopKMixin):
             attentions = attentions[:, :, :, token_positions]
         return attentions, {}
 
-    def _apply_filter(self, attentions, label: Union[list, str] = None):
+    def _apply_filter(self, attentions, label: Union[list, str] = None, errors_only: bool = False, correct_only: bool = False):
         """Top word, position or word+positions by one or many label(s).
 
         Parameters
@@ -145,12 +146,21 @@ class LanguageModelInspector(TopKMixin):
         ValueError
             If label is not in the evaluation data Y.
         """
-        if not label:
-            return attentions
-        labels = label if type(label) == list else [label]
-        indices = [idx for idx, y in enumerate(self.Y) if y in labels]
+
+        indices = list(range(self.Y))
+
+        if errors_only:
+            indices = [i for i in indices if self.Y[i] == self.predictions[i]]
+
+        if correct_only:
+            indices = [i for i in indices if self.Y[i] != self.predictions[i]]
+
+        if label:
+            labels = label if type(label) == list else [label]
+            indices = [i for i in indices if self.Y[i] in labels]
+
         if not indices:
-            msg = "No such label(s): " + str(label)
+            msg = "All data was filtered out. Nothing to compare."
             raise ValueError(msg)
         attentions = attentions[indices, :, :, :]
         return attentions, {'indices': indices}
