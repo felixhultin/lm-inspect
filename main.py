@@ -117,6 +117,17 @@ input_ids = [x['pos'] for x in Xval]
 results = inspector.topk_most_attended(k=5, label='betydelse_1_2', layer=[0,3, 6, 11], head=1, 
                                        input_id=input_ids)
 
+def report(Y, predictions):
+    report = {}
+    for y, p in zip(Y, predictions):
+        if y not in report:
+            report[y] = {'correct': 0, 'false': 0}
+        if y == p:
+            report[y]['correct'] += 1
+        else:
+            report[y]['false'] += 1
+    return report
+
 """
 inspector.filter().scope().context().most_attended_to(k=3)
 

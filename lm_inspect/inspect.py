@@ -95,7 +95,7 @@ class LanguageModelInspector(TopKMixin):
 
 
     def _apply_config(self, **kwargs):
-        filter_args = {k:v for k,v in kwargs.items() if k in getfullargspec(self._apply_filter.args)}
+        filter_args = {k:v for k,v in kwargs.items() if k in getfullargspec(self._apply_filter).args}
         scope_args = {k:v for k,v in kwargs.items() if k in getfullargspec(self._apply_scope).args}
         context_args = {k:v for k,v in kwargs.items() if k in getfullargspec(self._apply_context).args}
 
@@ -147,13 +147,13 @@ class LanguageModelInspector(TopKMixin):
             If label is not in the evaluation data Y.
         """
 
-        indices = list(range(self.Y))
+        indices = list(range(len(self.Y)))
 
         if errors_only:
-            indices = [i for i in indices if self.Y[i] == self.predictions[i]]
+            indices = [i for i in indices if self.Y[i] != self.predictions[i]]
 
         if correct_only:
-            indices = [i for i in indices if self.Y[i] != self.predictions[i]]
+            indices = [i for i in indices if self.Y[i] == self.predictions[i]]
 
         if label:
             labels = label if type(label) == list else [label]
@@ -173,9 +173,9 @@ class LanguageModelInspector(TopKMixin):
             attentions = attentions.unsqueeze(3)
         return attentions, {}
 
-    def todict(self, top):
+    def todict(self, top, k: int = 5):
         _, _, _, n_positions, _ = top.shape
-        topk = (top.sum(dim=0).sum(dim=2) / n_positions).topk(5)
+        topk = (top.sum(dim=0).sum(dim=2) / n_positions).topk(k)
         indices, probs = topk.indices, topk.values
         output = {'indices': indices.tolist(), 'values': probs.tolist()}
         return output

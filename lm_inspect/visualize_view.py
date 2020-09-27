@@ -11,7 +11,7 @@ def visualize_inspector():
 
 def visualize(results, tokenizer):
     js_text = Javascript(filename='lm_inspect/web/visualize.js').data
-    css_text = open('lm_inspect/inspect.css').read()
+    css_text = open('lm_inspect/web/inspect.css').read()
     html_template = Template('''
         <body>
           <div id="container">

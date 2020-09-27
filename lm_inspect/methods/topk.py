@@ -27,9 +27,9 @@ class TopKMixin:
         for idx, i in enumerate(indices):
             token_ids = self.tokenized_inputs[i]
             top[idx].index_add_(3, token_ids, attentions[idx])
-        if kwargs.get('visualize'):
-            d = self.todict(top)
-            id_to_token = {i:self.tokenizer.decode(i) for i in list(chain(*chain(*d['indices'])))}
+        if kwargs.get('visualize'): # refactor this part.
+            d = self.todict(top, k = k)
+            id_to_token = {i:self.tokenizer.decode(i).replace(" ", "") for i in list(chain(*chain(*d['indices'])))}
             visualize(d, id_to_token)
         topk_kwargs = { k:v for k,v in kwargs.items() if k in {'display', 'decode', 'k', 'return_json'} }
         return top

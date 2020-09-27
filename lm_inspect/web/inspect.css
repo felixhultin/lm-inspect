@@ -9,6 +9,10 @@
   font: 16px monospace
 }
 
+text {
+ font-size: 9px;
+}
+
 td {
   padding: 5px;
   border-bottom: 1px solid black;
