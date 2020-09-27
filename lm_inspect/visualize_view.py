@@ -1,4 +1,4 @@
-from IPython.core.display import display, HTML, Javascript, CSS
+from IPython.core.display import display, HTML, Javascript
 from string import Template
 
 def visualize_inspector():
