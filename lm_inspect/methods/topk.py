@@ -4,6 +4,7 @@ from itertools import chain
 
 from lm_inspect.visualize_view import visualize
 
+
 class TopKMixin:
 
     def topk_most_attended(self, k: int = 5, **kwargs):
@@ -29,7 +30,13 @@ class TopKMixin:
             top[idx].index_add_(3, token_ids, attentions[idx])
         if kwargs.get('visualize'): # refactor this part.
             d = self.todict(top, k = k)
-            id_to_token = {i:self.tokenizer.decode(i).replace(" ", "") for i in list(chain(*chain(*d['indices'])))}
+            id_to_token = self._flatten_and_decode(d)
             visualize(d, id_to_token)
         topk_kwargs = { k:v for k,v in kwargs.items() if k in {'display', 'decode', 'k', 'return_json'} }
         return top
+        
+    def _flatten_and_decode(self, outputs):
+        all = {i:self.tokenizer.decode(i).replace(" ", "") for i in list(chain(*chain(*outputs['all']['indices'])))}
+        agg = {i:self.tokenizer.decode(i).replace(" ", "") for i in outputs['agg']['indices']}
+        last = {i:self.tokenizer.decode(i).replace(" ", "") for i in outputs['last']['indices']}
+        return {**all, **agg, **last}

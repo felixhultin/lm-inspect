@@ -20,7 +20,7 @@ require(["d3"], function(d3) {
     };
 
     // Temporary hack
-    var data = results;
+    var data = results.all;
     var tmpTokenizer = tokenizer;
 
     var uniqueIndices = data.indices

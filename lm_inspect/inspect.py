@@ -172,10 +172,19 @@ class LanguageModelInspector(TopKMixin):
             attentions = attentions[list(range(n_samples)), :, :, input_ids, :]
             attentions = attentions.unsqueeze(3)
         return attentions, {}
-
+    
     def todict(self, top, k: int = 5):
-        _, _, _, n_positions, _ = top.shape
-        topk = (top.sum(dim=0).sum(dim=2) / n_positions).topk(k)
-        indices, probs = topk.indices, topk.values
-        output = {'indices': indices.tolist(), 'values': probs.tolist()}
-        return output
+        _, n_layers, n_heads, n_positions, _ = top.shape
+        topk_scope = (top.sum(dim=0).sum(dim=2) / n_positions).topk(k)
+        indices_scope, probs_scope = topk_scope.indices, topk_scope.values
+        scope_output = {'indices': indices_scope.tolist(), 'values': probs_scope.tolist()}
+        
+        topk_agg = top.sum(dim=0).sum(dim=0).sum(dim=0).sum(dim=0).topk(k)
+        indices_agg, probs_agg = topk_agg.indices, topk_agg.values
+        agg_output = {'indices': indices_agg.tolist(), 'values': probs_agg.tolist()}
+
+        topk_last = top[:, n_layers - 1, :, :, :].sum(dim=0).sum(dim=0).sum(dim=0).topk(k)
+        indices_last, probs_last = topk_last.indices, topk_last.values
+        last_output = {'indices': indices_last.tolist(), 'values': probs_last.tolist()}
+
+        return {'all': scope_output, 'agg': agg_output, 'last': last_output}
