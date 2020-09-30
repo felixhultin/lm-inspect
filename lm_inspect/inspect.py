@@ -174,17 +174,19 @@ class LanguageModelInspector(TopKMixin):
         return attentions, {}
     
     def todict(self, top, k: int = 5):
-        _, n_layers, n_heads, n_positions, _ = top.shape
-        topk_scope = (top.sum(dim=0).sum(dim=2) / n_positions).topk(k)
+        n_samples, n_layers, n_heads, n_positions, _ = top.shape
+        topk_scope = (top.sum(dim=0).sum(dim=2) / n_samples / n_positions).topk(k)
         indices_scope, probs_scope = topk_scope.indices, topk_scope.values
         scope_output = {'indices': indices_scope.tolist(), 'values': probs_scope.tolist()}
         
         topk_agg = top.sum(dim=0).sum(dim=0).sum(dim=0).sum(dim=0).topk(k)
         indices_agg, probs_agg = topk_agg.indices, topk_agg.values
+        probs_agg = probs_agg / n_samples/ n_layers / n_heads / n_positions
         agg_output = {'indices': indices_agg.tolist(), 'values': probs_agg.tolist()}
 
         topk_last = top[:, n_layers - 1, :, :, :].sum(dim=0).sum(dim=0).sum(dim=0).topk(k)
         indices_last, probs_last = topk_last.indices, topk_last.values
+        probs_last = probs_last / n_samples / n_layers / n_heads / n_positions
         last_output = {'indices': indices_last.tolist(), 'values': probs_last.tolist()}
 
         return {'all': scope_output, 'agg': agg_output, 'last': last_output}

@@ -19,6 +19,8 @@ def visualize(results, tokenizer):
             </table>
             <table id="topk">
             </table>
+            <table id="last">
+            </table>
           <div/>
         </body>
         <style>$css_text</style>

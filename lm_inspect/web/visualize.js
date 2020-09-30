@@ -20,7 +20,8 @@ require(["d3"], function(d3) {
     };
 
     // Temporary hack
-    var data = results.all;
+    var allData = results;
+    var data = allData.all;
     var tmpTokenizer = tokenizer;
 
     var uniqueIndices = data.indices
@@ -38,6 +39,7 @@ require(["d3"], function(d3) {
 
     var modelTable = d3.select('#model');
     var topkList = d3.select('#topk');
+    var lastList = d3.select('#last');
 
     var update = function(nofLayers, nofHeads, nofWords = 10) {
 
@@ -140,7 +142,7 @@ require(["d3"], function(d3) {
 
       topkList
         .selectAll('tr')
-        .data(data['indices'][nofLayers-1][nofHeads-1])
+        .data(allData.agg['indices'])
         .enter()
         .append('tr')
         .append('th')
@@ -158,7 +160,33 @@ require(["d3"], function(d3) {
         })
         .append('th')
         .text(function(d, i) {
-          var prob =  data['values'][nofLayers-1][nofHeads-1][i]
+          var prob =  allData.agg['values'][i]
+          var percentage = round(prob, 3) * 100
+          return `${percentage}`;
+        });
+
+	
+	lastList
+        .selectAll('tr')
+        .data(allData.last['indices'])
+        .enter()
+        .append('tr')
+        .append('th')
+        .text(function(d) {
+          return window.decodeWord(d);
+        })
+        .style("background-color", function(d) {
+          return myColor(d);
+        })
+        .style("color", function(d) {
+          return "white";
+        })
+        .select(function() {
+          return this.parentNode;
+        })
+        .append('th')
+        .text(function(d, i) {
+          var prob =  allData.last['values'][i]
           var percentage = round(prob, 3) * 100
           return `${percentage}`;
         });
