@@ -18,16 +18,17 @@ require(["d3"], function(d3) {
           Jupyter.notebook.kernel.execute(`print(${python})`, callbacks);
       });
     };
-
     // Temporary hack
     var allData = results;
     var data = allData.all;
     var tmpTokenizer = tokenizer;
 
-    var uniqueIndices = data.indices
-      .reduce((prev, curr) => prev.concat(curr), [])
-      .reduce((prev, curr) => prev.concat(curr), [])
-      .filter((item, i, arr) => arr.indexOf(item) === i);
+    var uniqueIndices = Object.keys(tokenizer);
+
+    //var uniqueIndices = data.indices
+    //  .reduce((prev, curr) => prev.concat(curr), [])
+    //  .reduce((prev, curr) => prev.concat(curr), [])
+    //  .filter((item, i, arr) => arr.indexOf(item) === i);
 
 
 
@@ -41,8 +42,7 @@ require(["d3"], function(d3) {
     var topkList = d3.select('#topk');
     var lastList = d3.select('#last');
 
-    var update = function(nofLayers, nofHeads, nofWords = 10) {
-
+    var visualizeScope = function(nofLayers, nofHeads, nofWords = 10) {
       var svg = modelTable
         .selectAll("tr")
         .data([...Array(nofHeads).keys()])
@@ -126,7 +126,7 @@ require(["d3"], function(d3) {
         .enter()
         .append("th")
         .html(function(_, d) {
-          return `l<sub>${d}</sub>`;
+          return `l<sub>${data.config.scope.layer[d]}</sub>`;
         });
 
      //Layer labels
@@ -136,9 +136,18 @@ require(["d3"], function(d3) {
       .html(function() {
         var head = this.parentNode.getAttribute("head");
         if (head) {
-          return `h<sub>${head}</sub>`;
+          return `h<sub>${data.config.scope.head[head]}</sub>`;
         }
       });
+    }
+
+    var update = function(nofLayers, nofHeads, nofWords = 10) {
+
+      if (data) {
+        var nofLayers = data.indices.length;
+        var nofHeads = data.indices[0].length;
+        visualizeScope(nofLayers, nofHeads);
+      }
 
       topkList
         .selectAll('tr')
@@ -165,7 +174,7 @@ require(["d3"], function(d3) {
           return `${percentage}`;
         });
 
-	
+
 	lastList
         .selectAll('tr')
         .data(allData.last['indices'])
@@ -238,10 +247,7 @@ require(["d3"], function(d3) {
     }
     */
 
-    var nofLayers = data.indices.length;
-    var nofHeads = data.indices[0].length;
-
-    update(nofLayers, nofHeads);
+    update();
 
     // Generate and display some random table data
 

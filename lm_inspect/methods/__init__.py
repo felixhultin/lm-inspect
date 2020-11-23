@@ -1,1 +1,1 @@
-from .topk import TopKMixin
+from .topk import TopkMostAttendedTo

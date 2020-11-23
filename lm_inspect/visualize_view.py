@@ -1,3 +1,5 @@
+import json
+
 from IPython.core.display import display, HTML, Javascript
 from string import Template
 
@@ -30,5 +32,5 @@ def visualize(results, tokenizer):
             $js_text
         </script>
     ''')
-    template_vars = {'js_text': js_text, 'results': results, 'tokenizer': tokenizer, 'css_text': css_text}
+    template_vars = {'js_text': js_text, 'results': json.dumps(results), 'tokenizer': tokenizer, 'css_text': css_text}
     display(HTML(html_template.substitute(template_vars)))
