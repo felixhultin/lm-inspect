@@ -39,8 +39,8 @@ class BERTEncoder(nn.Module):
           word_outputs[idx] = top_layer_output[idx, pos]
 
         # For logging purposes, since this can take a long time.
-        print('\r' + str(self.sample_idx) + " / " + str(self.sample_size), end='')
-        sys.stdout.flush()
+        #print('\r' + str(self.sample_idx) + " / " + str(self.sample_size), end='')
+        #sys.stdout.flush()
         self.sample_idx += len(documents)
         if self.sample_idx >= self.sample_size:
           self.sample_idx = 0
@@ -94,5 +94,5 @@ Xval = bert_tokenize_and_encode(tokenizer, Xval, 64)
 # BOF HACK to get label encoder
 _, Ytrain = read_data('swedish_wsd/swedish_lexical_sample_TRAIN_corpus.csv', 32)
 label_encoder = LabelEncoder()
-label_encoder.fit(Ytrain)
+label_encoder.fit(Ytrain + Yval)
 # EOF HACK

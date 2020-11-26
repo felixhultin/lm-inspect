@@ -1,6 +1,7 @@
 import copy
 import json
 import logging
+import sys
 
 import transformers
 import torch
@@ -108,8 +109,11 @@ class LanguageModelInspector:
                 predictions += guesses
                 n += loader.batch_size
                 # TODO: fix bug in progress message
-                logging.info(n, " / ", len(Y))
+                print('\r', n, " / ", len(Y), end='')
+                sys.stdout.flush()
+                
             print("\nDone.")
-            self.attentions = torch.cat(self.attentions, dim=1).permute(1, 0, 2, 3, 4)
+            self.attentions = torch.cat(self.attentions, dim=1).permute(1, 0, 2, 3, 4).to(self.device)
             self.predictions = predictions
+            self.tokenized_inputs = self.tokenized_inputs.to(self.device)
             return Config(self.attentions, X, Y, predictions, self.tokenized_inputs, self.tokenizer, self.device)

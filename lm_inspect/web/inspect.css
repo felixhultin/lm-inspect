@@ -13,6 +13,10 @@ text {
  font-size: 9px;
 }
 
+th {
+ text-align: center;
+}
+
 td {
   padding: 5px;
   border-bottom: 1px solid black;
@@ -31,6 +35,7 @@ td.exit, tr.exit td {
 }
 
 td.row-header {
+    
   border-right: 1px solid black;
   font-weight: bold;
 }

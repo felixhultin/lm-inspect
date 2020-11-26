@@ -11,6 +11,7 @@ class Config():
         self.attentions = attentions
         self.X = X
         self.Y = Y
+        self.indices = list(range(len(self.Y)))
         self.predictions = predictions
         self.tokenized_inputs = tokenized_inputs
         self.tokenizer = tokenizer
@@ -67,8 +68,10 @@ class Config():
 
         self.X = [self.X[i] for i in indices]
         self.Y = [self.Y[i] for i in indices]
+        self.tokenized_inputs = [self.tokenized_inputs[i] for i in indices]
         self.predictions = [self.predictions[i] for i in indices]
         self.attentions = self.attentions[indices, :, :, :]
+        self.indices = indices
         return self
 
     def scope(self, layer: Union[list, int] = None, head : Union[list, int] = None,
@@ -102,7 +105,7 @@ class Config():
         self.config['context'] = { k:v for k,v in locals().items() if k != 'self' }
         attentions = self.attentions
         if input_id is not None:
-            input_ids = [input_id] if type(input_id) == int else input_id
+            input_ids = [input_id] if type(input_id) == int else [input_id[idx] for idx in self.indices]
             n_samples = attentions.shape[0]
             attentions = attentions[list(range(n_samples)), :, :, input_ids, :]
             attentions = attentions.unsqueeze(3)
